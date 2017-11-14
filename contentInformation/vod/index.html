@@ -1,0 +1,177 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="renderer" content="webkit|ie-comp|ie-stand">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="expires" content="Wed, 26 Feb 1997 08:21:57 GMT">
+
+<!--[if lt IE 9]>
+    <script type="text/javascript" src="../../common/h-ui/lib/html5shiv.js"></script>
+    <script type="text/javascript" src="../../common/h-ui/lib/respond.min.js"></script>
+    <![endif]-->
+
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/static/h-ui/css/H-ui.css" />
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/static/h-ui.admin/css/H-ui.admin.css" />
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/lib/Hui-iconfont/1.0.8/iconfont.css" />
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/static/h-ui.admin/skin/default/skin.css" id="skin" />
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/static/h-ui.admin/css/style.css" />
+<link rel="stylesheet" href="../../common/h-ui/lib/zTree/v3/css/zTreeStyle/zTreeStyle.css" type="text/css">
+
+<!--解决IE6 png透明-->
+<!--[if IE 6]>
+<script type="text/javascript" src="../../common/h-ui/lib/DD_belatedPNG_0.0.8a-min.js" ></script>
+<script>DD_belatedPNG.fix('.pngfix,.icon');</script>
+<![endif]-->
+
+<title>产品分类</title>
+</head>
+<body style="height: 100%">
+<nav class="breadcrumb">
+    <i class="Hui-iconfont">&#xe67f;</i> 首页
+    <span class="c-gray en">&gt;</span> 内容信息管理
+    <span class="c-gray en">&gt;</span> 点播节目管理
+    <a class="btn btn-success radius r" style="line-height:1.6em;margin-top:3px" href="javascript:location.replace(location.href);" title="刷新" ><i class="Hui-iconfont">&#xe68f;</i></a>
+</nav>
+
+<div class="pos-a " style="width:100%;top:40px;bottom: 0">
+    <div  class="line-right hidden-xs vod-menu " >
+        <ul id="treeCategory" class="ztree"  style="margin-left: 10px;"></ul>
+    </div>
+
+    <div class="pos-a vod-content" >
+           <iframe ID="movieIframe" Name="testIframe" FRAMEBORDER=0 SCROLLING=AUTO width=100%  height=99% ></iframe>
+    </div>
+</div>
+
+<script type="text/javascript" src="../../common/h-ui/lib/jquery/1.9.1/jquery.min.js"></script>
+<script type="text/javascript" src="../../common/h-ui/lib/layer/2.4/layer.js"></script>
+<script type="text/javascript" src="../../common/h-ui/static/h-ui/js/H-ui.js"></script>
+<script type="text/javascript" src="../../common/h-ui/static/h-ui.admin/js/H-ui.admin.js"></script>
+
+<script type="text/javascript" src="../../common/h-ui/lib/zTree/v3/js/jquery.ztree.all-3.5.min.js"></script>
+<script type="text/javascript" src="../../common/js/public.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    var movieIframe = $("#movieIframe");
+    var tree = $("#treeCategory");
+    var setting = {
+        view: {
+            dblClickExpand: false,      //双击节点时，是否自动展开父节点的标识
+            showLine: false,            //设置 zTree 是否显示节点之间的连线。
+            selectedMulti: false        //设置是否允许同时选中多个节点。
+        },
+        callback: {
+            /*父节点展开之前的事件回调函数，并且根据返回值确定是否允许展开操作*/
+            beforeExpand:function(treeId, treeNode){
+                console.log("beforeExpand");
+                setting.getNodeData(treeNode,false);
+                console.info(treeNode);
+            },
+
+            /*单击节点之前的事件回调函数，并且根据返回值确定是否允许单击操作*/
+            beforeClick: function(treeId, treeNode) {
+                console.log("beforeClick");
+                if (treeNode.isParent) {//如果是父节点
+                    setting.getNodeData(treeNode,true);
+                } else {    //子节点
+                    console.info(treeNode);
+                    updateMovieIframe(treeNode.cid,treeNode.classid);
+                    return true;
+                }
+            }
+
+        },
+        getNodeData:function(treeNode,expand){
+            var zTree = $.fn.zTree.getZTreeObj("treeCategory");
+            if((null == treeNode.children)||(0 == treeNode.children.length)){//如果不存在子节点
+                getMovieClassList(treeNode.cid,function(moveList){
+                    zTree.addNodes(treeNode,moveList,true);  //true :添加节点后是否自动展开父节点，true为不展开
+                });
+            }
+            if(expand){
+                zTree.expandNode(treeNode);
+            }
+            return true;
+        }
+    };
+    getMovieCategoryList();
+
+
+    /*获取电影分类总列表*/
+    function getMovieCategoryList(){
+        http.post("/ottprj/movie/queryMovieCategoryList.do","",function(data){
+            console.log(data);
+            var list = data.listData;
+            createMovieCategoryList(list);
+        },function(errorInfo){
+            console.log(errorInfo);
+            var list = [
+                    new MOVIE_CATEGORY(1,"Movice"),
+                    new MOVIE_CATEGORY(2,"Series"),
+                    new MOVIE_CATEGORY(3,"Cartoon"),
+                    new MOVIE_CATEGORY(4,"Variety"),
+                    new MOVIE_CATEGORY(5,"Mv")
+            ];
+
+            createMovieCategoryList(list);
+        });
+    }
+
+    function createMovieCategoryList(list){
+        for(var i=0;i<list.length;i++){
+            list[i].isParent = true;
+            list[i].name = list[i].categoryname;
+        }
+        console.log(list);
+        tree = $.fn.zTree.init(tree, setting, list);
+    }
+
+    /*获取节目分类列表*/
+    function getMovieClassList(cid,callback){
+        http.post("/ottprj/movie/queryMovieClassList.do",{cid:cid},function(data){
+            var list = data.listData;
+            createMovieClassList(list,callback);
+        },function(msg){
+            var listArray = [
+                [
+                    new MOVIE_CLASS(11,"动作",1),
+                    new MOVIE_CLASS(12,"喜剧",1),
+                    new MOVIE_CLASS(13,"卡通",1),
+                    new MOVIE_CLASS(14,"动作",1)
+                ],
+                [
+                    new MOVIE_CLASS(21,"爱情",2),
+                    new MOVIE_CLASS(22,"童话",2),
+                    new MOVIE_CLASS(23,"文艺",2),
+                    new MOVIE_CLASS(24,"动作",2)
+                ]
+            ];
+            if(cid<listArray.length){
+                createMovieClassList(listArray[cid],callback);
+            }
+
+        });
+    }
+
+    function createMovieClassList(list,callback){
+        for(var i=0;i< list.length;i++){
+            list[i].name = list[i].classname;
+        }
+        console.info(list);
+        callback(list);
+    }
+
+    function updateMovieIframe(cid, classId){
+        var url = "movieList.html?"+"cid="+cid+"&classid="+classId;
+        console.log("更新电影列表:"+url);
+        movieIframe.attr("src",url);
+    }
+
+});
+</script>
+</body>
+</html>

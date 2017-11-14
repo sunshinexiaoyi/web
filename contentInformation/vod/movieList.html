@@ -1,0 +1,332 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="renderer" content="webkit|ie-comp|ie-stand">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="expires" content="Wed, 26 Feb 1997 08:21:57 GMT">
+
+<!--兼容IE低版本浏览器-->
+<!--[if lt IE 9]>
+    <script type="text/javascript" src="../../common/h-ui/lib/html5shiv.js"></script>
+    <script type="text/javascript" src="../../common/h-ui/lib/respond.min.js"></script>
+    <![endif]-->
+
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/static/h-ui/css/H-ui.css" />
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/static/h-ui.admin/css/H-ui.admin.css" />
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/lib/Hui-iconfont/1.0.8/iconfont.css" />
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/static/h-ui.admin/skin/default/skin.css" id="skin" />
+<link rel="stylesheet" type="text/css" href="../../common/h-ui/static/h-ui.admin/css/style.css" />
+
+
+<!--解决IE6 png透明-->
+<!--[if IE 6]>
+    <script type="text/javascript" src="../../common/h-ui/lib/DD_belatedPNG_0.0.8a-min.js"></script>
+    <script>DD_belatedPNG.fix('.pngfix,.icon');</script>
+    <![endif]-->
+
+<title>节目信息管理</title>
+</head>
+
+<body>
+
+
+	<div class="cl pd-5 bg-1 bk-gray"> <span class="l">
+        <a href="javascript:;" onclick="batchDel()" class="btn btn-danger radius"><i class="Hui-iconfont">&#xe6e2;</i> 批量删除</a>
+        <a href="javascript:;" onclick="member_add('添加用户','add.html','','510')" class="btn btn-primary radius">
+            <i class="Hui-iconfont">&#xe600;</i> 添加节目</a></span>
+
+        <div style="display: inline-block;float: right">
+            <input type="text" class="input-text" style="width:250px" placeholder="输入节目名、导演、演员" id="" name="">
+            <button type="submit" class="btn btn-success radius"  name=""><i class="Hui-iconfont">&#xe665;</i> 搜节目</button>
+        </div>
+       </div>
+	
+	<div class="mt-20" style="margin: 10px">
+	<table class="table table-border table-bordered table-hover table-bg" id = "movieTable">
+		<thead>
+			<tr class="text-c">
+				<th width="25">
+                    <div class="check-box">
+                        <input type="checkbox" id="checkboxSelectAll">
+                    </div>
+                </th>
+				<th width="120">影片名称</th>
+				<th width="90">演员</th>
+				<th width="90">导演</th>
+				<th width="90">上映日期</th>
+                <th width="60">是否收费</th>
+				<th width="60">参考价格</th>
+				<th width="80">是否推荐</th>
+				<th width="80">多分辨率</th>
+				<th width="80">DRM状态</th>
+				<th width="80">操作</th>
+			</tr>
+		</thead>
+		<tbody  class="text-c">
+        </tbody>
+	</table>
+	</div>
+</div>
+
+<!--_footer 作为公共模版分离出去-->
+<script type="text/javascript" src="../../common/h-ui/lib/jquery/1.9.1/jquery.min.js"></script>
+<script type="text/javascript" src="../../common/h-ui/lib/layer/2.4/layer.js"></script>
+<script type="text/javascript" src="../../common/h-ui/static/h-ui/js/H-ui.min.js"></script>
+<script type="text/javascript" src="../../common/h-ui/static/h-ui.admin/js/H-ui.admin.js"></script>
+<!--/_footer 作为公共模版分离出去-->
+
+<!--请在下方写此页面业务相关的脚本-->
+<script type="text/javascript" src="../../common/h-ui/lib/My97DatePicker/4.8/WdatePicker.js"></script>
+<script type="text/javascript" src="../../common/h-ui/lib/datatables/1.10.0/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="../../common/h-ui/lib/laypage/1.2/laypage.js"></script>
+<script type="text/javascript" src="../../common/js/public.js"></script>
+<script type="text/javascript">
+
+    var table;
+    var movieList;   //记录电影列表
+
+
+    /*用户-添加*/
+    function member_add(title,url,w,h){
+        layer_show(title,url,w,h);
+    }
+    
+    /*用户-删除*/
+    function deleteMovie(obj,index){
+       // console.log(rowStr);
+        //var movie = JSON.parse(rowStr);
+        console.log(index);
+        var movie = movieList[index];
+        layer.confirm('确认要删除['+movie.movieName+']吗？',function(index){
+            http.post("deleteMovie",{movieId:movie.movieId},function(){
+                $(obj).parents("tr").remove();
+                layer.msg('已删除!',{icon:1,time:1000});
+                layer.close(index);
+            },function(){
+                //$(obj).parents("tr").remove();             
+               
+                //table.row(index).remove();//.draw(false);
+               // layer.msg('已删除!',{icon:1,time:1000});
+                console.info(table.rows());
+               console.info(table.rows(index).remove());
+               layer.close(index);
+             
+            });
+
+        });
+    }
+    
+    function batchDel(){
+    	var delList = [];
+    	var i = 0; 
+    	$(".check-row").each(function(){
+    			if(this.checked){
+    				delList.push(movieList[i]);
+    			}
+    			
+    			i++;
+    	});
+    
+    
+    	layer.confirm('确认删除吗？',function(index){
+    		
+    	});
+    	
+    	
+    	
+    }
+
+$(function(){
+
+    var cid = -1;
+    var classid = -1;
+    var $movieTable = $("#movieTable");
+    var setting = {// language:lang,  //提示信息
+        autoWidth: false,  //禁用自动调整列宽
+        stripeClasses: ["odd", "even"],  //为奇偶行加上样式，兼容不支持CSS伪类的场合
+        searching: true,  //启用原生搜索
+        orderMulti: true,  //启用多列排序
+        ordering:true,//关闭表格的排序功能
+        order: [],  //取消默认排序查询,否则复选框一列会出现小箭头
+        renderer: "bootstrap",  //渲染样式：Bootstrap和jquery-ui
+
+        /*
+        numbers - 只有只有数字按钮
+        simple - 只有上一页、下一页两个按钮
+        simple_numbers - 除了上一页、下一页两个按钮还有页数按钮，Datatables默认是这个
+        full - 有四个按钮首页、上一页、下一页、末页
+        full_numbers - 除首页、上一页、下一页、末页四个按钮还有页数按钮
+        first_last_numbers - 除首页、末页两个按钮还有页数按钮
+        */
+        processing:true, //DataTables载入数据时，是否显示‘进度’提示
+        pagingType: "full_numbers",  //分页样式
+        serverSide: true,  //启用服务器端分页    必须
+        ajax: function (data, callback, settings) {//data 发送数据; callback 成功回调 ;settings 设置信息
+            /*
+            console.info(data);
+            console.info(callback);
+            console.info(settings); */
+
+
+            var loadIndex = layer.load(1);		//添加加载中效果
+
+            //封装请求参数
+            var param = {};
+            param.pageSize = data.length;	//页面显示记录条数，在页面显示每页显示多少项的时候
+            param.start = data.start;		//开始的记录序号
+            param.pageNumber = (data.start / data.length)+1;//当前页码
+
+            param.order = data.order;	//排序
+            param.search = data.search;	//搜索
+
+            param.classid= cid;
+            param.categoryId=classid;
+
+            console.info("***请求数据***");
+            console.info(param);
+            //ajax请求数据
+            http.post("/ottprj/movie/queryMovieList.do",param,
+                    function(data){
+                        movieList = data;
+                        layer.close(loadIndex);
+                    },
+                    function(){
+                        var test=[
+                            new MOVIE("机械师",1,10,1,0,1),
+                            new MOVIE("奇异博士",1,10,1,0,1),
+                            new MOVIE("金刚：骷髅岛",1,10,0,1,1),
+                            new MOVIE("银河护卫队2",1,10,1,0,1),
+                            new MOVIE("王牌特工:特工学院",1,10,1,0,0),
+                            new MOVIE("机械师",1,10,1,0,1),
+                            new MOVIE("奇异博士",1,10,1,0,1),
+                            new MOVIE("金刚：骷髅岛",1,10,0,1,1),
+                            new MOVIE("银河护卫队2",1,10,1,0,1),
+                            new MOVIE("王牌特工:特工学院",1,10,1,0,0),
+                            new MOVIE("银河护卫队2",1,10,1,0,1),
+                            new MOVIE("王牌特工:特工学院",1,10,1,0,0)
+                        ];
+                        
+                        for(var i=0;i<test.length;i++){
+                        	test[i].index = i;
+                        }
+                        
+                        var result={
+                            total : test.length,
+                            rows : test
+                        };
+                        movieList = test;
+                        //setTimeout仅为测试延迟效果
+                       // setTimeout(function () {
+                        //封装返回数据
+                        var returnData = {};
+                        //returnData.draw = result.draw;//这里直接自行返回了draw计数器,应该由后台返回
+                        returnData.recordsTotal = result.total;//返回数据全部记录
+                        returnData.recordsFiltered = result.total;//后台不实现过滤功能，每次查询均视作全部结果
+                        returnData.data = result.rows;//返回的数据列表
+                        //console.log(returnData);
+                        //调用DataTables提供的callback方法，代表数据已封装完成并传回DataTables进行渲染
+                        //此时的数据需确保正确无误，异常判断应在执行此回调前自行处理完毕
+
+                        layer.close(loadIndex);
+                        callback(returnData);
+                        //}, 2000);
+                    });
+        },
+        //列表表头字段
+        columns: [  {} ,
+            {data:'movieName'},
+            {data:'actor'},
+            {data:'director'},
+            {data:'releaseDate'},
+            {data:'isPay'},
+            {data:'referencePrice'},
+            {data:'isReferral'},
+            {data:'isMultyBitrate'},
+            {data:'drmState',
+                render:function(data,type,row){//data 字段的数据;type display;row 行数据
+                    if(data==0){
+                        return "关闭";
+                    }else{
+                        return "开启";
+                    }
+                }
+
+            }
+        ],
+        columnDefs:[//列渲染aoColumnDefs
+        {orderable:false,targets:[0,5,7,8,9,10]},// 制定列不参与排序
+        {
+            targets:0,
+            render:function(data,type,row){
+                return '<div class="check-box"><input type="checkbox" class="check-row" ></div>';
+            }
+        },
+        {
+            targets:10,	//第n+1列
+            render:function(data,type,row){           
+                //var rowData = JSON.stringify(row);
+                //rowData = rowData.replace(/\"/g,"&quot;");//需要将双引号进行html转义 &quot
+               // console.info(rowData);
+                return '<a style="text-decoration:none" class="ml-5" onClick="deleteMovie(this,'+row.index+')" ' +
+                        'href="javascript:;" title="删除"><i class="Hui-iconfont" style="color: red">&#xe6e2;</i></a>';
+            }
+        }]
+    };
+
+    init();
+
+    function init(){
+        initParam();
+        initTable();
+        initSelectAll();
+    }
+
+    function initTable(){
+        table = $movieTable.dataTable(setting).api();
+        table.on( 'draw', function () {
+            console.info("draw");
+            setCheckboxState($("#checkboxSelectAll").prop("checked"));
+            $("[type='checkbox'][id!='checkboxSelectAll']").iCheck({
+                checkboxClass: 'icheckbox-blue',
+                radioClass: 'iradio-blue'
+
+            });
+        });
+    }
+
+    function initParam(){
+         cid = getQueryString("cid");
+         classid = getQueryString("classid");
+         console.info("****** 获取cid classid ******");
+         console.info("cid:"+cid+ " classid:"+classid);
+
+    }
+
+    function initSelectAll(){
+        var $selectAll  = $('#checkboxSelectAll');
+        $selectAll.iCheck({
+            checkboxClass: 'icheckbox-blue',
+            radioClass: 'iradio-blue'
+
+        });
+
+        $selectAll.on("ifChanged",function(event){
+            console.info(this.checked);
+            setCheckboxState(this.checked);
+        });
+
+    }
+
+    function setCheckboxState(checked){
+        $("[type='checkbox']").iCheck(checked?"check":"uncheck");
+    }
+
+});
+
+</script>
+</body>
+</html>
